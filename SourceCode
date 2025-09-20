@@ -1,0 +1,81 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+class Program
+{
+    [DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    const int SW_HIDE = 0;
+
+    [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    private static Dictionary<int, string> shortcuts = new Dictionary<int, string>
+    {
+        {1, "https://www.google.com"},
+        {2, "https://github.com"},
+        {3, "https://www.roblox.com"},
+        {4, "https://www.reddit.com"},
+        {5, "https://twitter.com"},
+        {6, "https://www.instagram.com"}
+    };
+
+    static void Main()
+    {
+        IntPtr handle = GetConsoleWindow();
+        ShowWindow(handle, SW_HIDE);
+
+        RegisterHotKey(IntPtr.Zero, 1, 0, (uint)ConsoleKey.F1);
+        RegisterHotKey(IntPtr.Zero, 2, 0, (uint)ConsoleKey.F2);
+        RegisterHotKey(IntPtr.Zero, 3, 0, (uint)ConsoleKey.F3);
+        RegisterHotKey(IntPtr.Zero, 4, 0, (uint)ConsoleKey.F4);
+        RegisterHotKey(IntPtr.Zero, 5, 0, (uint)ConsoleKey.F5);
+        RegisterHotKey(IntPtr.Zero, 6, 0, (uint)ConsoleKey.F7);
+
+        while (NativeMethods.GetMessage(out NativeMethods.MSG msg, IntPtr.Zero, 0, 0))
+        {
+            if (msg.message == NativeMethods.WM_HOTKEY)
+            {
+                int id = msg.wParam.ToInt32();
+                if (shortcuts.ContainsKey(id))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = shortcuts[id],
+                        UseShellExecute = true
+                    });
+                }
+            }
+            NativeMethods.TranslateMessage(ref msg);
+            NativeMethods.DispatchMessage(ref msg);
+        }
+
+        foreach (var id in shortcuts.Keys)
+        {
+            UnregisterHotKey(IntPtr.Zero, id);
+        }
+    }
+
+    private class NativeMethods
+    {
+        public const int WM_HOTKEY = 0x0312;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MSG
+        {
+            public IntPtr hwnd;
+            public int message;
+            public IntPtr wParam;
+            public IntPtr lParam;
+            public uint time;
+            public int pt_x;
+            public int pt_y;
+        }
+
+        [DllImport("user32.dll")] public static extern bool GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+        [DllImport("user32.dll")] public static extern bool TranslateMessage(ref MSG lpMsg);
+        [DllImport("user32.dll")] public static extern IntPtr DispatchMessage(ref MSG lpMsg);
+    }
+}
